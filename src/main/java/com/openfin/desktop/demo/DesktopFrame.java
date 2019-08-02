@@ -67,97 +67,97 @@ public class DesktopFrame extends JFrame
       hiddenFrame.pack();
       hiddenFrame.setVisible(false);
       
-      JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true);
+//      JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true);
 
-//		JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true) {
-//		
-//			private void superSetIcon(boolean b) throws PropertyVetoException {
-//				super.setIcon(b);
-//			}
-//		
-//			@Override
-//			public void setIcon(boolean b) throws PropertyVetoException {
-//				if (b) {
-//					// when iconified, JInternalFrame is removed from the container
-//					// it causes the renderer of openfin window to be destroyed
-//					// workaround: to embed openfin window to the hidden frame.
-//					long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
-//					startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
-//						@Override
-//						public void onSuccess(Ack ack) {
-//							try {
-//								superSetIcon(b);
-//							}
-//							catch (PropertyVetoException e) {
-//								e.printStackTrace();
-//							}
-//						}
-//		
-//						@Override
-//						public void onError(Ack ack) {
-//						}
-//					});
-//				} else {
-//					superSetIcon(b);
-//				}
-//			}
-//		};
+		JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true) {
 		
-		embedCanvas.addHierarchyListener(new HierarchyListener() {
+			private void superSetIcon(boolean b) throws PropertyVetoException {
+				super.setIcon(b);
+			}
+		
 			@Override
-			public void hierarchyChanged(HierarchyEvent e) {
-				if (openfinWindowEmbedded) {
-					System.out.println("hierarychyChanged: " + e);
-					if ((HierarchyEvent.DISPLAYABILITY_CHANGED & e.getChangeFlags()) != 0) {
-						if (!e.getChanged().isDisplayable()) {
-							long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
-							startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
-
-								@Override
-								public void onSuccess(Ack ack) {
-									placedToHiddenWindow = true;
-								}
-				
-								@Override
-								public void onError(Ack ack) {
-								}
-							});
+			public void setIcon(boolean b) throws PropertyVetoException {
+				if (b) {
+					// when iconified, JInternalFrame is removed from the container
+					// it causes the renderer of openfin window to be destroyed
+					// workaround: to embed openfin window to the hidden frame.
+					long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
+					startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
+						@Override
+						public void onSuccess(Ack ack) {
+							try {
+								superSetIcon(b);
+							}
+							catch (PropertyVetoException e) {
+								e.printStackTrace();
+							}
 						}
-						else {
-							long canvasHWndId = Native.getComponentID(embedCanvas);
-							startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
-								@Override
-								public void onSuccess(Ack ack) {
-									placedToHiddenWindow = false;
-								}
-				
-								@Override
-								public void onError(Ack ack) {
-								}
-							});
+		
+						@Override
+						public void onError(Ack ack) {
 						}
-					}
+					});
+				} else {
+					superSetIcon(b);
 				}
 			}
-			
-		});
-
-//		frame.addInternalFrameListener(new InternalFrameAdapter() {
+		};
+		
+//		embedCanvas.addHierarchyListener(new HierarchyListener() {
 //			@Override
-//			public void internalFrameDeiconified(InternalFrameEvent e) {
-//				//when internal frame is restored, re-embed openfin window back to canvas
-//				long canvasHWndId = Native.getComponentID(embedCanvas);
-//				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
-//					@Override
-//					public void onSuccess(Ack ack) {
+//			public void hierarchyChanged(HierarchyEvent e) {
+//				if (openfinWindowEmbedded) {
+//					System.out.println("hierarychyChanged: " + e);
+//					if ((HierarchyEvent.DISPLAYABILITY_CHANGED & e.getChangeFlags()) != 0) {
+//						if (!e.getChanged().isDisplayable()) {
+//							long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
+//							startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
+//
+//								@Override
+//								public void onSuccess(Ack ack) {
+//									placedToHiddenWindow = true;
+//								}
+//				
+//								@Override
+//								public void onError(Ack ack) {
+//								}
+//							});
+//						}
+//						else {
+//							long canvasHWndId = Native.getComponentID(embedCanvas);
+//							startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
+//								@Override
+//								public void onSuccess(Ack ack) {
+//									placedToHiddenWindow = false;
+//								}
+//				
+//								@Override
+//								public void onError(Ack ack) {
+//								}
+//							});
+//						}
 //					}
-//	
-//					@Override
-//					public void onError(Ack ack) {
-//					}
-//				});
+//				}
 //			}
+//			
 //		});
+
+		frame.addInternalFrameListener(new InternalFrameAdapter() {
+			@Override
+			public void internalFrameDeiconified(InternalFrameEvent e) {
+				//when internal frame is restored, re-embed openfin window back to canvas
+				long canvasHWndId = Native.getComponentID(embedCanvas);
+				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
+					@Override
+					public void onSuccess(Ack ack) {
+					}
+	
+					@Override
+					public void onError(Ack ack) {
+					}
+				});
+			}
+		});
 		
 
       frame.add( embedCanvas, BorderLayout.CENTER );
