@@ -5,9 +5,16 @@ import com.openfin.desktop.Window;
 import com.sun.jna.Native;
 
 import javax.swing.*;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
+
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
+import java.beans.PropertyVetoException;
 import java.lang.System;
 import java.util.UUID;
 
@@ -20,6 +27,9 @@ public class DesktopFrame extends JFrame
    private String openfin_app_url = "https://www.google.com";
 
    protected DesktopConnection desktopConnection;
+
+   private boolean openfinWindowEmbedded;
+   private boolean placedToHiddenWindow;
 
    public DesktopFrame()
    {
@@ -49,9 +59,106 @@ public class DesktopFrame extends JFrame
       setJMenuBar( bar ); // set menu bar for this application
 
       embedCanvas = new java.awt.Canvas();
+      embedCanvas.setFocusable(true);
+      
+      //create a hidden frame to hold the openfin window when it's iconified.
+      final JFrame hiddenFrame = new JFrame();
+      hiddenFrame.setPreferredSize(new Dimension(640, 480));
+      hiddenFrame.pack();
+      hiddenFrame.setVisible(false);
+      
+      JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true);
 
-      JInternalFrame frame = new JInternalFrame(
-              "Internal Frame", true, true, true, true );
+//		JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true) {
+//		
+//			private void superSetIcon(boolean b) throws PropertyVetoException {
+//				super.setIcon(b);
+//			}
+//		
+//			@Override
+//			public void setIcon(boolean b) throws PropertyVetoException {
+//				if (b) {
+//					// when iconified, JInternalFrame is removed from the container
+//					// it causes the renderer of openfin window to be destroyed
+//					// workaround: to embed openfin window to the hidden frame.
+//					long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
+//					startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
+//						@Override
+//						public void onSuccess(Ack ack) {
+//							try {
+//								superSetIcon(b);
+//							}
+//							catch (PropertyVetoException e) {
+//								e.printStackTrace();
+//							}
+//						}
+//		
+//						@Override
+//						public void onError(Ack ack) {
+//						}
+//					});
+//				} else {
+//					superSetIcon(b);
+//				}
+//			}
+//		};
+		
+		embedCanvas.addHierarchyListener(new HierarchyListener() {
+			@Override
+			public void hierarchyChanged(HierarchyEvent e) {
+				if (openfinWindowEmbedded) {
+					System.out.println("hierarychyChanged: " + e);
+					if ((HierarchyEvent.DISPLAYABILITY_CHANGED & e.getChangeFlags()) != 0) {
+						if (!e.getChanged().isDisplayable()) {
+							long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
+							startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
+
+								@Override
+								public void onSuccess(Ack ack) {
+									placedToHiddenWindow = true;
+								}
+				
+								@Override
+								public void onError(Ack ack) {
+								}
+							});
+						}
+						else {
+							long canvasHWndId = Native.getComponentID(embedCanvas);
+							startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
+								@Override
+								public void onSuccess(Ack ack) {
+									placedToHiddenWindow = false;
+								}
+				
+								@Override
+								public void onError(Ack ack) {
+								}
+							});
+						}
+					}
+				}
+			}
+			
+		});
+
+//		frame.addInternalFrameListener(new InternalFrameAdapter() {
+//			@Override
+//			public void internalFrameDeiconified(InternalFrameEvent e) {
+//				//when internal frame is restored, re-embed openfin window back to canvas
+//				long canvasHWndId = Native.getComponentID(embedCanvas);
+//				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
+//					@Override
+//					public void onSuccess(Ack ack) {
+//					}
+//	
+//					@Override
+//					public void onError(Ack ack) {
+//					}
+//				});
+//			}
+//		});
+		
 
       frame.add( embedCanvas, BorderLayout.CENTER );
       frame.setSize(1000,1000);
@@ -59,6 +166,36 @@ public class DesktopFrame extends JFrame
       theDesktop.add( frame ); // attach internal frame
       frame.setVisible( true ); // show internal frame
 
+		//when mixing lightweight and heavyweight component
+		frame.addComponentListener(new ComponentListener() {
+			private void revalidateWorkaround() {
+				theDesktop.revalidate();
+//				DesktopFrame.this.validate();
+			}
+
+			@Override
+			public void componentResized(ComponentEvent e) {
+				revalidateWorkaround();
+			}
+
+			@Override
+			public void componentMoved(ComponentEvent e) {
+				revalidateWorkaround();
+			}
+
+			@Override
+			public void componentShown(ComponentEvent e) {
+				revalidateWorkaround();
+			}
+
+			@Override
+			public void componentHidden(ComponentEvent e) {
+				revalidateWorkaround();
+			}
+		});
+      
+      
+      
       embedCanvas.addComponentListener(new ComponentAdapter() {
          @Override
          public void componentResized(ComponentEvent event) {
@@ -89,6 +226,8 @@ public class DesktopFrame extends JFrame
             ApplicationOptions options = new ApplicationOptions(uuid, uuid, openfin_app_url);
             WindowOptions mainWindowOptions = new WindowOptions();
             mainWindowOptions.setAutoShow(true);
+            mainWindowOptions.setFrame(false);
+            mainWindowOptions.setResizable(false);
             mainWindowOptions.setDefaultHeight(height);
             mainWindowOptions.setDefaultTop(50);
             mainWindowOptions.setDefaultWidth(width);
@@ -182,6 +321,8 @@ public class DesktopFrame extends JFrame
             public void onSuccess(Ack ack) {
                if (ack.isSuccessful()) {
                   previousPrarentHwndId = ack.getJsonObject().getLong("hWndPreviousParent");
+                  
+                  openfinWindowEmbedded = true;
                } else {
                   java.lang.System.out.println("embedding failed: " + ack.getJsonObject().toString());
                }
