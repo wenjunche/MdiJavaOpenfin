@@ -28,9 +28,6 @@ public class DesktopFrame extends JFrame
 
    protected DesktopConnection desktopConnection;
 
-   private boolean openfinWindowEmbedded;
-   private boolean placedToHiddenWindow;
-
    public DesktopFrame()
    {
       super( "Using a JDesktopPane" );
@@ -67,8 +64,6 @@ public class DesktopFrame extends JFrame
       hiddenFrame.pack();
       hiddenFrame.setVisible(false);
       
-//      JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true);
-
 		JInternalFrame frame = new JInternalFrame("Internal Frame", true, true, true, true) {
 		
 			private void superSetIcon(boolean b) throws PropertyVetoException {
@@ -102,45 +97,6 @@ public class DesktopFrame extends JFrame
 				}
 			}
 		};
-		
-//		embedCanvas.addHierarchyListener(new HierarchyListener() {
-//			@Override
-//			public void hierarchyChanged(HierarchyEvent e) {
-//				if (openfinWindowEmbedded) {
-//					System.out.println("hierarychyChanged: " + e);
-//					if ((HierarchyEvent.DISPLAYABILITY_CHANGED & e.getChangeFlags()) != 0) {
-//						if (!e.getChanged().isDisplayable()) {
-//							long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
-//							startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
-//
-//								@Override
-//								public void onSuccess(Ack ack) {
-//									placedToHiddenWindow = true;
-//								}
-//				
-//								@Override
-//								public void onError(Ack ack) {
-//								}
-//							});
-//						}
-//						else {
-//							long canvasHWndId = Native.getComponentID(embedCanvas);
-//							startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
-//								@Override
-//								public void onSuccess(Ack ack) {
-//									placedToHiddenWindow = false;
-//								}
-//				
-//								@Override
-//								public void onError(Ack ack) {
-//								}
-//							});
-//						}
-//					}
-//				}
-//			}
-//			
-//		});
 
 		frame.addInternalFrameListener(new InternalFrameAdapter() {
 			@Override
@@ -170,7 +126,7 @@ public class DesktopFrame extends JFrame
 		frame.addComponentListener(new ComponentListener() {
 			private void revalidateWorkaround() {
 				theDesktop.revalidate();
-//				DesktopFrame.this.validate();
+				DesktopFrame.this.validate();
 			}
 
 			@Override
@@ -274,7 +230,7 @@ public class DesktopFrame extends JFrame
             }
 
             @Override
-            public void onClose(String error) {
+            public void onClose(String reason) {
                // updateMessagePanel(String.format("Connection closed %s", error));
             }
             @Override
@@ -321,8 +277,6 @@ public class DesktopFrame extends JFrame
             public void onSuccess(Ack ack) {
                if (ack.isSuccessful()) {
                   previousPrarentHwndId = ack.getJsonObject().getLong("hWndPreviousParent");
-                  
-                  openfinWindowEmbedded = true;
                } else {
                   java.lang.System.out.println("embedding failed: " + ack.getJsonObject().toString());
                }
