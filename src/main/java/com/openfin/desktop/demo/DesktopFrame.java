@@ -77,21 +77,21 @@ public class DesktopFrame extends JFrame
 					// it causes the renderer of openfin window to be destroyed
 					// workaround: to embed openfin window to the hidden frame.
 					long hiddenFrameHWndId = Native.getComponentID(hiddenFrame);
-					startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
-						@Override
-						public void onSuccess(Ack ack) {
-							try {
-								superSetIcon(b);
-							}
-							catch (PropertyVetoException e) {
-								e.printStackTrace();
-							}
-						}
-		
-						@Override
-						public void onError(Ack ack) {
-						}
-					});
+//					startupHtml5app.getWindow().embedInto(hiddenFrameHWndId, 640, 480, new AckListener() {
+//						@Override
+//						public void onSuccess(Ack ack) {
+//							try {
+//								superSetIcon(b);
+//							}
+//							catch (PropertyVetoException e) {
+//								e.printStackTrace();
+//							}
+//						}
+//						@Override
+//						public void onError(Ack ack) {
+//						}
+//					});
+                    superSetIcon(b);
 				} else {
 					superSetIcon(b);
 				}
@@ -103,15 +103,15 @@ public class DesktopFrame extends JFrame
 			public void internalFrameDeiconified(InternalFrameEvent e) {
 				//when internal frame is restored, re-embed openfin window back to canvas
 				long canvasHWndId = Native.getComponentID(embedCanvas);
-				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
-					@Override
-					public void onSuccess(Ack ack) {
-					}
-	
-					@Override
-					public void onError(Ack ack) {
-					}
-				});
+                launchHTMLApps();
+//				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
+//					@Override
+//					public void onSuccess(Ack ack) {
+//					}
+//					@Override
+//					public void onError(Ack ack) {
+//					}
+//				});
 			}
 		});
 		
@@ -203,11 +203,12 @@ public class DesktopFrame extends JFrame
                }
                @Override
                public void onError(Ack ack) {
-                  // logger.error(String.format("Error launching %s %s", options.getUUID(), ack.getReason()));
+                   System.out.println(String.format("Error launching %s %s", options.getUUID(), ack.getReason()));
                }
             });
          } catch (Exception e) {
-            // logger.error("Error launching app", e);
+             e.printStackTrace();
+             System.out.println("Error launching app");
          }
       }
 
@@ -246,7 +247,7 @@ public class DesktopFrame extends JFrame
          };
          RuntimeConfiguration configuration = new RuntimeConfiguration();
          configuration.setDevToolsPort(9090);
-         configuration.setAdditionalRuntimeArguments(" --v=1 "); // enable additional logging from Runtime
+         configuration.setAdditionalRuntimeArguments(" --v=1 --inspect "); // enable additional logging from Runtime
          String desktopVersion = java.lang.System.getProperty("com.openfin.demo.version");
          if (desktopVersion == null) {
             desktopVersion = "stable";
