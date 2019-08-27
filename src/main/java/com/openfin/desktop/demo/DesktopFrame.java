@@ -27,6 +27,7 @@ public class DesktopFrame extends JFrame
    private String openfin_app_url = "https://www.google.com";
 
    protected DesktopConnection desktopConnection;
+    protected Window embeddedWindow;  //  OpenFin window to embed in Java Canvas
 
    public DesktopFrame()
    {
@@ -99,21 +100,20 @@ public class DesktopFrame extends JFrame
 		};
 
 		frame.addInternalFrameListener(new InternalFrameAdapter() {
-			@Override
+
+           @Override
 			public void internalFrameDeiconified(InternalFrameEvent e) {
-				//when internal frame is restored, re-embed openfin window back to canvas
-				long canvasHWndId = Native.getComponentID(embedCanvas);
-                launchHTMLApps();
-//				startupHtml5app.getWindow().embedInto(canvasHWndId, embedCanvas.getWidth(), embedCanvas.getHeight(), new AckListener() {
-//					@Override
-//					public void onSuccess(Ack ack) {
-//					}
-//					@Override
-//					public void onError(Ack ack) {
-//					}
-//				});
+                embedStartupApp();
 			}
-		});
+
+           @Override
+           public void internalFrameClosing(InternalFrameEvent e) {
+              super.internalFrameClosing(e);
+              if (embeddedWindow != null) {
+                 embeddedWindow.close(true, null);
+              }
+           }
+        });
 		
 
       frame.add( embedCanvas, BorderLayout.CENTER );
@@ -158,8 +158,8 @@ public class DesktopFrame extends JFrame
             super.componentResized(event);
             Dimension newSize = event.getComponent().getSize();
             try {
-               if (startupHtml5app != null) {
-                  startupHtml5app.getWindow().embedComponentSizeChange((int)newSize.getWidth(), (int)newSize.getHeight());
+               if (embeddedWindow != null) {
+                  embeddedWindow.embedComponentSizeChange((int)newSize.getWidth(), (int)newSize.getHeight());
                }
             } catch (Exception e) {
                e.printStackTrace();
@@ -179,6 +179,7 @@ public class DesktopFrame extends JFrame
 
          try {
             String uuid = UUID.randomUUID().toString();
+             System.out.println(String.format("Launching %s", uuid));
             ApplicationOptions options = new ApplicationOptions(uuid, uuid, openfin_app_url);
             WindowOptions mainWindowOptions = new WindowOptions();
             mainWindowOptions.setAutoShow(true);
@@ -196,7 +197,8 @@ public class DesktopFrame extends JFrame
                   Application app = (Application) ack.getSource();
                   try {
                      Thread.sleep(1000);
-                     embedStartupApp(app);
+                     embeddedWindow = app.getWindow();
+                     embedStartupApp();
                   } catch (Exception ex) {
                      ex.printStackTrace();
                   }
@@ -259,18 +261,14 @@ public class DesktopFrame extends JFrame
          e.printStackTrace();
       }
    }
-   private Application startupHtml5app;
+
    protected String appUuid = "JavaEmbedding";
    protected String startupUuid = "OpenFinHelloWorld";
    protected java.awt.Canvas embedCanvas;
    protected Long previousPrarentHwndId;
-   private void embedStartupApp(Application app) {
+   private void embedStartupApp() {
       try {
-         if (app == null) {
-            app = Application.wrap(this.startupUuid, this.desktopConnection);
-         }
-         startupHtml5app =app;
-         Window html5Wnd = app.getWindow();
+         Window html5Wnd = embeddedWindow;
          long parentHWndId = Native.getComponentID(this.embedCanvas);
          System.out.println("Canvas HWND " + Long.toHexString(parentHWndId));
          html5Wnd.embedInto(parentHWndId, this.embedCanvas.getWidth(), this.embedCanvas.getHeight(), new AckListener() {
